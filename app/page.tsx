@@ -13,11 +13,17 @@ import RejectSheet from '@/components/RejectSheet';
 import StopCard from '@/components/StopCard';
 import { EMIRATES } from '@/lib/emirates';
 import type { RoadInfo, RouteResponse, Stop } from '@/lib/types';
-import { addDays, fmtDate, hasPos, mapsRouteUrl, mapsStopUrl, plural, todayDubai } from '@/lib/util';
+import { fmtDate, hasPos, mapsRouteUrl, mapsStopUrl, plural, todayDubai } from '@/lib/util';
+
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+}
 
 const RouteMap = dynamic(() => import('@/components/RouteMap'), {
   ssr: false,
-  loading: () => <div className="h-full w-full animate-pulse bg-slate-100" />,
+  loading: () => <div className="h-full w-full animate-pulse bg-slate-950" />,
 });
 
 type ActionName = 'picked_up' | 'reject' | 'set_time';
@@ -166,17 +172,19 @@ function Desk() {
     return { iso, label: fmtDate(iso) };
   });
 
+  const isSunday = new Date(date).getDay() === 0;
+
   if (error === 'invalid') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-900 p-4">
-        <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
-          <Logo size={56} className="mx-auto mb-4" />
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-600">
-            <Icon name="lock" className="h-6 w-6" />
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4 font-sans text-white">
+        <div className="w-full max-w-sm rounded-3xl bg-slate-900 border border-slate-800 p-8 text-center shadow-2xl">
+          <Logo size={64} className="mx-auto mb-5" />
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
+            <Icon name="lock" className="h-7 w-7" />
           </div>
-          <h1 className="text-lg font-bold text-slate-900">Link Expired or Invalid</h1>
-          <p className="mt-2 text-xs leading-relaxed text-slate-500">
-            Please open your personalized <b>Driver Desk</b> link sent via WhatsApp.
+          <h1 className="text-xl font-extrabold text-white">Link Expired or Invalid</h1>
+          <p className="mt-2.5 text-xs leading-relaxed text-slate-400">
+            Please open your personalized <b className="text-emerald-400">Driver Desk</b> link sent via official WhatsApp dispatch.
           </p>
         </div>
       </div>
@@ -184,196 +192,201 @@ function Desk() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-slate-50 font-sans text-slate-900 antialiased">
-      {/* Modular Header Component */}
-      <Header
-        driverName={route?.driver}
-        date={date}
-        setDate={setDate}
-        loading={loading}
-        onRefresh={() => load()}
-        onOpenCalendar={() => setIsCalendarOpen(true)}
-      />
+    <div className="min-h-screen bg-slate-950 p-0 sm:p-4 lg:p-6 flex items-center justify-center font-sans text-slate-100 antialiased">
+      {/* Boxed Medium/Large App Container */}
+      <div className="w-full h-[100vh] sm:h-[92vh] max-w-7xl flex flex-col rounded-none sm:rounded-3xl overflow-hidden bg-slate-950 border border-slate-800 shadow-2xl">
+        <Header
+          driverName={route?.driver}
+          date={date}
+          setDate={setDate}
+          loading={loading}
+          onRefresh={() => load()}
+          onOpenCalendar={() => setIsCalendarOpen(true)}
+        />
 
-      {/* Workspace Body */}
-      <main className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        {/* Interactive Map Section */}
-        <section
-          className={`relative shrink-0 bg-slate-200 transition-all duration-300 lg:order-2 lg:h-auto lg:flex-1 ${
-            mapExpanded ? 'h-[65dvh]' : 'h-[42dvh]'
-          }`}
-        >
-          <RouteMap
-            stops={stops}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            me={me}
-            command={command}
-            onRoad={setRoad}
-          />
+        <main className="flex min-h-0 flex-1 flex-col lg:flex-row">
+          <section
+            className={`relative shrink-0 bg-slate-900 transition-all duration-300 lg:order-2 lg:h-auto lg:flex-1 ${
+              mapExpanded ? 'h-[70dvh]' : 'h-[45dvh]'
+            }`}
+          >
+            <RouteMap
+              stops={stops}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              me={me}
+              command={command}
+              onRoad={setRoad}
+            />
 
-          {/* Map Overlay Floating Bar */}
-          <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 flex items-end justify-between gap-2">
-            {nextUrl && next ? (
-              <a
-                href={nextUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="pointer-events-auto flex max-w-[72%] items-center gap-2 rounded-full bg-slate-900/90 px-3.5 py-2 text-xs font-bold text-white shadow-lg backdrop-blur-md transition active:scale-95"
-              >
-                <Icon name="navigation" className="h-4 w-4 shrink-0 text-emerald-400" />
-                <span className="truncate">Next: {next.name ?? next.order_id}</span>
-              </a>
-            ) : (
-              <span />
-            )}
-
-            {/* Floating Map Utilities */}
-            <div className="pointer-events-auto flex flex-col gap-1.5">
-              <button
-                type="button"
-                onClick={() => setCommand({ type: 'fit', n: Date.now() })}
-                aria-label="Fit map"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-700 shadow-md transition"
-              >
-                <Icon name="route" className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                disabled={!me}
-                onClick={() => setCommand({ type: 'me', n: Date.now() })}
-                aria-label="My location"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-blue-600 shadow-md transition disabled:text-slate-300"
-              >
-                <Icon name="locate" className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setMapExpanded((v) => !v)}
-                aria-label="Toggle map size"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-700 shadow-md transition lg:hidden"
-              >
-                <Icon name={mapExpanded ? 'shrink' : 'expand'} className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* Stops & Condensed Metrics Panel */}
-        <aside className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-slate-100/70 lg:order-1 lg:w-[440px] lg:flex-none lg:border-r lg:border-slate-200">
-          {stops.length > 0 && (
-            <div className="space-y-2.5 p-3">
-              {/* Compact Inline Stats Bar for Mobile */}
-              <div className="grid grid-cols-4 gap-1.5 rounded-xl border border-slate-200/80 bg-white p-2.5 shadow-2xs">
-                <div className="text-center">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Stops</p>
-                  <p className="text-sm font-extrabold text-slate-900">{stops.length}</p>
-                </div>
-                <div className="border-l border-slate-100 text-center">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Distance</p>
-                  <p className="text-sm font-extrabold text-slate-900">{pinnedCount < 2 ? '—' : road ? `${Math.round(road.km)}km` : '...'}</p>
-                </div>
-                <div className="border-l border-slate-100 text-center">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Delayed</p>
-                  <p className={`text-sm font-extrabold ${lateCount ? 'text-rose-600' : 'text-slate-900'}`}>{lateCount}</p>
-                </div>
-                <div className="border-l border-slate-100 text-center">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Timeline</p>
-                  <p className="text-xs font-bold text-slate-700 truncate">{etas.length ? etas[0] : '—'}</p>
-                </div>
-              </div>
-
-              {/* Emirate Filter Pills */}
-              <div className="flex flex-wrap items-center gap-1">
-                {Object.keys(counts).map((code) => (
-                  <span
-                    key={code}
-                    className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-700 shadow-2xs"
-                  >
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: EMIRATES[code]?.color || '#94a3b8' }} />
-                    {EMIRATES[code]?.name ?? code} ({counts[code]})
-                  </span>
-                ))}
-              </div>
-
-              {allUrl && (
+            <div className="pointer-events-none absolute inset-x-4 bottom-4 z-10 flex items-end justify-between gap-3">
+              {nextUrl && next ? (
                 <a
-                  href={allUrl}
+                  href={nextUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex h-9 w-full items-center justify-center gap-1.5 rounded-lg bg-slate-900 text-xs font-bold text-white shadow-2xs transition active:scale-[0.99]"
+                  className="pointer-events-auto flex max-w-[75%] items-center gap-2.5 rounded-2xl bg-slate-900/95 px-4 py-2.5 text-xs font-bold text-white shadow-2xl border border-slate-700/80 backdrop-blur-md transition active:scale-95 hover:border-emerald-500/50"
                 >
-                  <Icon name="navigation" className="h-3.5 w-3.5 text-emerald-400" />
-                  Open Route in Google Maps (Top {Math.min(10, stops.length)})
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
+                    <Icon name="navigation" className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="truncate">Next Stop: {next.name ?? next.order_id}</span>
                 </a>
+              ) : (
+                <span />
               )}
-            </div>
-          )}
 
-          {/* Stops List */}
-          <div className="flex-1 px-3 pb-24 pt-1">
-            {loading && !route && (
-              <div className="space-y-2.5">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-20 animate-pulse rounded-xl bg-slate-200" />
-                ))}
-              </div>
-            )}
-
-            {error === 'network' && !route && (
-              <div className="rounded-xl border border-slate-200 bg-white p-5 text-center shadow-2xs">
-                <p className="font-bold text-slate-800 text-sm">Connection Interrupted</p>
+              <div className="pointer-events-auto flex flex-col gap-2">
                 <button
                   type="button"
-                  onClick={() => load()}
-                  className="mt-3 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-xs"
+                  onClick={() => setCommand({ type: 'fit', n: Date.now() })}
+                  aria-label="Fit map"
+                  className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900/95 text-slate-200 border border-slate-700/80 shadow-2xl backdrop-blur-md transition hover:bg-slate-800 hover:text-emerald-400"
                 >
-                  Retry Loading
+                  <Icon name="route" className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  disabled={!me}
+                  onClick={() => setCommand({ type: 'me', n: Date.now() })}
+                  aria-label="My location"
+                  className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900/95 text-blue-400 border border-slate-700/80 shadow-2xl backdrop-blur-md transition hover:bg-slate-800 disabled:opacity-40"
+                >
+                  <Icon name="locate" className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMapExpanded((v) => !v)}
+                  aria-label="Toggle map size"
+                  className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900/95 text-slate-200 border border-slate-700/80 shadow-2xl backdrop-blur-md transition hover:bg-slate-800 lg:hidden"
+                >
+                  <Icon name={mapExpanded ? 'shrink' : 'expand'} className="h-4 w-4" />
                 </button>
               </div>
-            )}
+            </div>
+          </section>
 
-            {route && stops.length === 0 && (
-              <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-2xs">
-                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                  <Icon name="party" className="h-5 w-5" />
-                </div>
-                <h3 className="mt-2 text-sm font-bold text-slate-900">All Done!</h3>
-                <p className="text-xs text-slate-500">No pending pickups for {fmtDate(date)}.</p>
-              </div>
-            )}
-
+          <aside className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-slate-900/60 lg:order-1 lg:w-[440px] lg:flex-none lg:border-r lg:border-slate-800">
             {stops.length > 0 && (
-              <div className="mb-2 flex items-center justify-between px-0.5">
-                <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                  {plural(stops.length, 'Pickup')}
-                </h2>
-                <span className="text-[10px] text-slate-400">Tap card for options</span>
+              <div className="space-y-3 p-4">
+                <div className="grid grid-cols-4 gap-2 rounded-2xl border border-slate-800 bg-slate-900 p-3 shadow-xl">
+                  <div className="text-center">
+                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Stops</p>
+                    <p className="text-base font-black text-white mt-0.5">{stops.length}</p>
+                  </div>
+                  <div className="border-l border-slate-800 text-center">
+                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Distance</p>
+                    <p className="text-base font-black text-white mt-0.5">{pinnedCount < 2 ? '—' : road ? `${Math.round(road.km)}km` : '...'}</p>
+                  </div>
+                  <div className="border-l border-slate-800 text-center">
+                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Delayed</p>
+                    <p className={`text-base font-black mt-0.5 ${lateCount ? 'text-rose-400' : 'text-white'}`}>{lateCount}</p>
+                  </div>
+                  <div className="border-l border-slate-800 text-center">
+                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Timeline</p>
+                    <p className="text-xs font-black text-emerald-400 mt-1 truncate">{etas.length ? etas[0] : '—'}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {Object.keys(counts).map((code) => (
+                    <span
+                      key={code}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3 py-1 text-xs font-semibold text-slate-300 shadow-sm"
+                    >
+                      <span className="h-2.5 w-2.5 rounded-full shadow-xs" style={{ backgroundColor: EMIRATES[code]?.color || '#10b981' }} />
+                      {EMIRATES[code]?.name ?? code} <span className="text-slate-500 font-bold">({counts[code]})</span>
+                    </span>
+                  ))}
+                </div>
+
+                {allUrl && (
+                  <a
+                    href={allUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-extrabold text-slate-950 shadow-lg shadow-emerald-950/50 transition active:scale-[0.99]"
+                  >
+                    <Icon name="navigation" className="h-4 w-4 text-slate-950" />
+                    Open Route in Google Maps (Top {Math.min(10, stops.length)})
+                  </a>
+                )}
               </div>
             )}
 
-            <ul className="space-y-2.5">
-              {stops.map((s, i) => (
-                <StopCard
-                  key={s.id}
-                  stop={s}
-                  index={i}
-                  isNext={i === 0}
-                  selected={selectedId === s.id}
-                  busy={busyId === s.id}
-                  onSelect={() => setSelectedId(selectedId === s.id ? null : s.id)}
-                  onPicked={() => setConfirming(s)}
-                  onReject={() => setRejecting(s)}
-                  onSetTime={(time) => act(s, 'set_time', { time })}
-                />
-              ))}
-            </ul>
-          </div>
-        </aside>
-      </main>
+            <div className="flex-1 px-4 pb-28 pt-1">
+              {loading && !route && (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-900 border border-slate-800" />
+                  ))}
+                </div>
+              )}
 
-      {/* Modular Footer Component */}
-      <Footer date={date} />
+              {error === 'network' && !route && (
+                <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-center shadow-xl">
+                  <p className="font-bold text-white text-sm">Connection Interrupted</p>
+                  <button
+                    type="button"
+                    onClick={() => load()}
+                    className="mt-4 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-extrabold text-slate-950 shadow-md hover:bg-emerald-500 transition"
+                  >
+                    Retry Loading
+                  </button>
+                </div>
+              )}
+
+              {isSunday && stops.length === 0 && (
+                <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-center shadow-xl">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    <Icon name="calendar" className="h-6 w-6" />
+                  </div>
+                  <h3 className="mt-3 text-base font-extrabold text-white">Sunday is Week Off</h3>
+                  <p className="text-xs text-slate-400 mt-1">No scheduled pickups on Sundays (Monday – Saturday work week).</p>
+                </div>
+              )}
+
+              {!isSunday && route && stops.length === 0 && (
+                <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-center shadow-xl">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <Icon name="party" className="h-6 w-6" />
+                  </div>
+                  <h3 className="mt-3 text-base font-extrabold text-white">All Pickups Complete!</h3>
+                  <p className="text-xs text-slate-400 mt-1">No pending tasks for {fmtDate(date)}.</p>
+                </div>
+              )}
+
+              {stops.length > 0 && (
+                <div className="mb-3 flex items-center justify-between px-1">
+                  <h2 className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    {plural(stops.length, 'Pickup')}
+                  </h2>
+                  <span className="text-[11px] font-medium text-slate-400">Tap card for options</span>
+                </div>
+              )}
+
+              <ul className="space-y-3">
+                {stops.map((s, i) => (
+                  <StopCard
+                    key={s.id}
+                    stop={s}
+                    index={i}
+                    isNext={i === 0}
+                    selected={selectedId === s.id}
+                    busy={busyId === s.id}
+                    onSelect={() => setSelectedId(selectedId === s.id ? null : s.id)}
+                    onPicked={() => setConfirming(s)}
+                    onReject={() => setRejecting(s)}
+                    onSetTime={(time) => act(s, 'set_time', { time })}
+                  />
+                ))}
+              </ul>
+            </div>
+          </aside>
+        </main>
+
+        <Footer date={date} />
+      </div>
 
       {confirming && (
         <ConfirmSheet
@@ -396,30 +409,29 @@ function Desk() {
       )}
 
       {toast && (
-        <div className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-xl">
-          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-slate-950">
-            <Icon name="check" className="h-3 w-3" />
+        <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2.5 rounded-2xl bg-emerald-500 px-5 py-3 text-xs font-black text-slate-950 shadow-2xl border border-emerald-400 animate-in fade-in slide-in-from-bottom-4">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-950 text-emerald-400">
+            <Icon name="check" className="h-3.5 w-3.5" />
           </span>
           {toast}
         </div>
       )}
 
-      {/* Root-Level Full-Screen Date Picker Modal */}
       {isCalendarOpen && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-full max-w-xs rounded-3xl bg-emerald-950 border border-emerald-800 p-4 shadow-2xl text-white">
-            <div className="flex items-center justify-between pb-3 border-b border-emerald-900">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-emerald-400">Select Route Date</h3>
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-3xl bg-slate-900 border border-slate-800 p-6 shadow-2xl text-white">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+              <h3 className="text-xs font-extrabold uppercase tracking-widest text-emerald-400">Select Route Date</h3>
               <button
                 type="button"
                 onClick={() => setIsCalendarOpen(false)}
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-900/60 text-emerald-200 hover:bg-emerald-800 text-xs font-bold"
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white text-xs font-bold transition"
               >
                 ✕
               </button>
             </div>
 
-            <div className="my-3 max-h-72 overflow-y-auto space-y-1.5 pr-1">
+            <div className="my-4 max-h-72 overflow-y-auto space-y-2 pr-1">
               {dateList.map(({ iso, label }) => {
                 const isSelected = iso === date;
                 return (
@@ -430,15 +442,15 @@ function Desk() {
                       setDate(iso);
                       setIsCalendarOpen(false);
                     }}
-                    className={`w-full rounded-xl px-3.5 py-2.5 text-left text-xs font-semibold transition flex items-center justify-between ${
+                    className={`w-full rounded-2xl px-4 py-3 text-left text-xs font-bold transition flex items-center justify-between ${
                       isSelected
-                        ? 'bg-emerald-500 text-slate-950 font-extrabold shadow-md'
-                        : 'bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900'
+                        ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                        : 'bg-slate-800/60 text-slate-200 hover:bg-slate-800'
                     }`}
                   >
                     <span>{label}</span>
                     {iso === todayDubai() && (
-                      <span className={`text-[9px] px-2 py-0.5 rounded-md uppercase font-extrabold ${isSelected ? 'bg-slate-950/20 text-slate-950' : 'bg-emerald-800 text-emerald-200'}`}>
+                      <span className={`text-[10px] px-2.5 py-0.5 rounded-lg uppercase font-black ${isSelected ? 'bg-slate-950/20 text-slate-950' : 'bg-emerald-500/20 text-emerald-400'}`}>
                         Today
                       </span>
                     )}
@@ -450,7 +462,7 @@ function Desk() {
             <button
               type="button"
               onClick={() => setIsCalendarOpen(false)}
-              className="w-full mt-1 rounded-xl bg-emerald-900/60 py-2 text-xs font-bold text-emerald-200 hover:bg-emerald-900 transition"
+              className="w-full rounded-xl bg-slate-800 py-3 text-xs font-extrabold text-slate-300 hover:bg-slate-700 hover:text-white transition"
             >
               Cancel
             </button>
@@ -463,63 +475,49 @@ function Desk() {
 
 function WelcomeLanding() {
   return (
-    <main className="min-h-screen bg-slate-900 text-white flex flex-col justify-between p-6 sm:p-12 font-sans">
-      {/* Header / Logo */}
-      <header className="flex items-center justify-between max-w-5xl mx-auto w-full border-b border-slate-800 pb-6">
+    <main className="min-h-screen bg-slate-950 text-white flex flex-col justify-between p-6 sm:p-12 font-sans selection:bg-emerald-500 selection:text-slate-950">
+      <header className="flex items-center justify-between max-w-5xl mx-auto w-full border-b border-slate-900 pb-6">
         <div className="flex items-center space-x-3 rtl:space-x-reverse">
-          <Logo size={36} />
-          <span className="text-xl font-bold tracking-wide">Lebas Logistics</span>
+          <Logo size={40} />
+          <span className="text-xl font-extrabold tracking-wide text-white">Lebas Logistics</span>
         </div>
-        <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
+        <span className="text-xs px-3.5 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono font-bold">
           Driver Portal v2.0
         </span>
       </header>
 
-      {/* Main Hero Banner */}
       <section className="max-w-3xl mx-auto text-center my-auto py-12">
-        <div className="inline-flex items-center justify-center p-4 bg-slate-800/80 rounded-2xl border border-slate-700/50 mb-6 shadow-xl">
-          <svg
-            className="w-12 h-12 text-emerald-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-            />
+        <div className="inline-flex items-center justify-center p-4 bg-slate-900 rounded-3xl border border-slate-800 mb-6 shadow-2xl">
+          <svg className="w-12 h-12 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
           </svg>
         </div>
 
-        <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4 text-slate-100">
+        <h1 className="text-3xl sm:text-5xl font-black tracking-tight mb-4 text-white">
           Welcome to <span className="text-emerald-400">Lebas Driver Desk</span>
         </h1>
-        <p className="text-slate-400 text-base sm:text-lg leading-relaxed mb-8">
+        <p className="text-slate-400 text-base sm:text-lg leading-relaxed mb-8 max-w-2xl mx-auto">
           The official dispatch system for daily route navigation, assigned pickup stops, and real-time fleet schedules.
         </p>
 
-        {/* Action Callout Box */}
-        <div className="bg-slate-800/50 backdrop-blur border border-slate-700/60 rounded-xl p-6 text-left rtl:text-right max-w-xl mx-auto shadow-2xl">
+        <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 text-left rtl:text-right max-w-xl mx-auto shadow-2xl">
           <div className="flex items-start space-x-4 rtl:space-x-reverse">
-            <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg mt-1">
+            <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20 mt-0.5">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
             </div>
             <div>
-              <h3 className="font-semibold text-slate-200 text-lg mb-1">Looking for your daily schedule?</h3>
+              <h3 className="font-extrabold text-slate-100 text-base mb-1">Looking for your daily schedule?</h3>
               <p className="text-slate-400 text-sm leading-relaxed">
-                Driver links are unique and secure. Please tap your personalized <span className="text-white font-medium">Driver Desk URL</span> received in your official WhatsApp dispatch message to access your daily tasks.
+                Driver links are unique and secure. Please tap your personalized <span className="text-emerald-400 font-bold">Driver Desk URL</span> received in your official WhatsApp dispatch message to access your daily tasks.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="max-w-5xl mx-auto w-full text-center border-t border-slate-800/80 pt-6 text-xs text-slate-500">
+      <footer className="max-w-5xl mx-auto w-full text-center border-t border-slate-900 pt-6 text-xs text-slate-500">
         <p>&copy; {new Date().getFullYear()} Lebas International Group. All rights reserved.</p>
       </footer>
     </main>
@@ -542,7 +540,7 @@ export default function Page() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-slate-900">
+        <div className="flex min-h-screen items-center justify-center bg-slate-950">
           <Logo size={64} />
         </div>
       }
