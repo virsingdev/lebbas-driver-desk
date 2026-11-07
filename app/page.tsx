@@ -404,7 +404,7 @@ function Desk() {
         </div>
       )}
 
-      {/* Root-Level Full-Screen Date Picker Modal (Guaranteed never to be hidden by map) */}
+      {/* Root-Level Full-Screen Date Picker Modal */}
       {isCalendarOpen && (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="w-full max-w-xs rounded-3xl bg-emerald-950 border border-emerald-800 p-4 shadow-2xl text-white">
@@ -461,6 +461,83 @@ function Desk() {
   );
 }
 
+function WelcomeLanding() {
+  return (
+    <main className="min-h-screen bg-slate-900 text-white flex flex-col justify-between p-6 sm:p-12 font-sans">
+      {/* Header / Logo */}
+      <header className="flex items-center justify-between max-w-5xl mx-auto w-full border-b border-slate-800 pb-6">
+        <div className="flex items-center space-x-3 rtl:space-x-reverse">
+          <Logo size={36} />
+          <span className="text-xl font-bold tracking-wide">Lebas Logistics</span>
+        </div>
+        <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
+          Driver Portal v2.0
+        </span>
+      </header>
+
+      {/* Main Hero Banner */}
+      <section className="max-w-3xl mx-auto text-center my-auto py-12">
+        <div className="inline-flex items-center justify-center p-4 bg-slate-800/80 rounded-2xl border border-slate-700/50 mb-6 shadow-xl">
+          <svg
+            className="w-12 h-12 text-emerald-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+            />
+          </svg>
+        </div>
+
+        <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4 text-slate-100">
+          Welcome to <span className="text-emerald-400">Lebas Driver Desk</span>
+        </h1>
+        <p className="text-slate-400 text-base sm:text-lg leading-relaxed mb-8">
+          The official dispatch system for daily route navigation, assigned pickup stops, and real-time fleet schedules.
+        </p>
+
+        {/* Action Callout Box */}
+        <div className="bg-slate-800/50 backdrop-blur border border-slate-700/60 rounded-xl p-6 text-left rtl:text-right max-w-xl mx-auto shadow-2xl">
+          <div className="flex items-start space-x-4 rtl:space-x-reverse">
+            <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg mt-1">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-200 text-lg mb-1">Looking for your daily schedule?</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Driver links are unique and secure. Please tap your personalized <span className="text-white font-medium">Driver Desk URL</span> received in your official WhatsApp dispatch message to access your daily tasks.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="max-w-5xl mx-auto w-full text-center border-t border-slate-800/80 pt-6 text-xs text-slate-500">
+        <p>&copy; {new Date().getFullYear()} Lebas International Group. All rights reserved.</p>
+      </footer>
+    </main>
+  );
+}
+
+function DeskRouter() {
+  const params = useSearchParams();
+  const d = params.get('d');
+  const t = params.get('t');
+
+  if (!d || !t) {
+    return <WelcomeLanding />;
+  }
+
+  return <Desk />;
+}
+
 export default function Page() {
   return (
     <Suspense
@@ -470,7 +547,7 @@ export default function Page() {
         </div>
       }
     >
-      <Desk />
+      <DeskRouter />
     </Suspense>
   );
 }
