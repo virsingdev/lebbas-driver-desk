@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import type { Stop } from '@/lib/types';
-import Icon from './Icon';
 
 const REASONS = [
   'Clothes not suitable / poor quality',
@@ -30,14 +29,20 @@ export default function RejectSheet({ stop, busy, onCancel, onConfirm }: Props) 
       >
         <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-slate-700 sm:hidden" />
         
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
-            <Icon name="x" className="h-6 w-6" />
-          </span>
-          <div className="min-w-0">
-            <h2 className="text-base font-extrabold leading-tight text-white">Reject {stop.order_id}</h2>
+        <div className="flex items-center justify-between">
+          <div className="min-w-0 pr-2">
+            <h2 className="text-base font-extrabold leading-tight text-white truncate">Reject {stop.order_id}</h2>
             <p className="truncate text-xs text-slate-400 mt-0.5">{stop.name ?? 'Customer'} — choose a reason</p>
           </div>
+
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Close modal"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white transition border border-slate-700"
+          >
+            ✕
+          </button>
         </div>
 
         <div className="mt-4 space-y-2.5">
